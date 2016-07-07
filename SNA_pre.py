@@ -3,6 +3,7 @@ __author__ = 'multiangle'
 from pymongo import MongoClient
 import json
 import File_Interface as FI
+from SNA_node import SNA_node
 
 ### 将转载的内容贴出来
 # client = MongoClient('localhost',27017)
@@ -29,4 +30,14 @@ import File_Interface as FI
 #     if total_count>200000:
 #         valid= False
 # FI.save_pickle(retweeted_data,'./static/retweeted_data.pkl')
+
+# 去除其他信息
+data = FI.load_pickle('./static/retweeted_data.pkl')
+info_list = []
+for line in data:
+    node = SNA_node(line)
+    info_list.append(node)
+
+
+
 
