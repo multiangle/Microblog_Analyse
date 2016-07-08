@@ -72,12 +72,18 @@ import copy
 #     print(head_id_list.__len__())
 # FI.save_pickle(info_dict,'./static/dealed_info_list.pkl')
 
-# 统计
-data = FI.load_pickle('./static/dealed_info_list.pkl')
+# # 统计
+# data = FI.load_pickle('./static/dealed_info_list.pkl')
+# id_list = list(data.keys())
+# for id in id_list:
+#     data[id].analyse()
+# FI.save_pickle(data,'./static/analyse_info_list.pkl')
+
+data = FI.load_pickle('./static/analyse_info_list.pkl')
 id_list = list(data.keys())
 for id in id_list:
-    data[id].analyse()
-FI.save_pickle(data,'./static/analyse_info_list.pkl')
+    if data[id].result['retweet_num']>1 :
+        print(data[id])
 
 
 

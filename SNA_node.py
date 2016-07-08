@@ -95,4 +95,4 @@ class SNA_node():
 
 
     def __str__(self):
-        return self.data
+        return self.data.__str__()
