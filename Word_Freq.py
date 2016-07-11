@@ -73,7 +73,7 @@ class WordFreqItemStatistic():
             if list[mid]['time'] < value :
                 low = mid + 1
             else:
-                high = mid - 1
+                high = mid
         return low
 
 class WordFreqTotalStatistic():
@@ -107,7 +107,7 @@ class WordFreqTotalStatistic():
             if list[mid]['time'] < value :
                 low = mid + 1
             else:
-                high = mid - 1
+                high = mid
         return low
 
     def __get_Correspond_Top_Obj(self,timestamp):
@@ -249,35 +249,32 @@ def Binary_Find(list,value):
         list.insert(i,{'time':value,'freq':1})
 
 if __name__=='__main__':
-    # stop_words = FI.load_pickle('./static/stop_words.pkl')
-    # wfts = WordFreqTotalStatistic()
-    # client = MongoClient('localhost',27017)
-    # db = client['microblog_spider']
-    # latest_history = db.latest_history
-    # count = 0
-    # data = []
-    # batch_size = 100
-    # gone_size = 0
-    # while count<10 :
-    #     d = latest_history.find().skip(count*batch_size).limit(batch_size)
-    #     d = [x for x in d]
-    #     data += d
-    #     count += 1
-    # text = [x['dealed_text']['left_content'][0] for x in data]
-    # date = [x['created_timestamp'] for x in data]
-    # cutted_text = []
-    # for i in range(text.__len__()):
-    #     s = jieba.cut(text[i])
-    #     for word in s:
-    #         if word not in stop_words:
-    #             wfts.Add_Word_With_Timestamp(word,date[i])
-    #     print('{x} is completed'.format(x = i))
-    #
-    # FI.save_pickle(wfts,'./static/wfts_1000.pkl')
+    stop_words = FI.load_pickle('./static/stop_words.pkl')
+    wfts = WordFreqTotalStatistic()
+    client = MongoClient('localhost',27017)
+    db = client['microblog_spider']
+    latest_history = db.latest_history
+    count = 0
+    data = []
+    batch_size = 100
+    gone_size = 0
 
-    wfts = FI.load_pickle('./static/wfts_1000.pkl')
-    word_item_list = wfts.word_statistic.values()
-    word_item_list = sorted(word_item_list, key=lambda x:x.total_freq,reverse=True)
+    while count<500 :
+        data = latest_history.find().skip(count*batch_size).limit(batch_size)
+        data = [x for x in data]
+        count += 1
+        text = [x['dealed_text']['left_content'][0] for x in data]
+        date = [x['created_timestamp'] for x in data]
+        cutted_text = []
+        for i in range(text.__len__()):
+            s = jieba.cut(text[i])
+            for word in s:
+                if word not in stop_words:
+                    wfts.Add_Word_With_Timestamp(word,date[i])
+        print('{x} is completed'.format(x = count))
+    FI.save_pickle(wfts,'./static/wfts_5w.pkl')
+
+    wfts = FI.load_pickle('./static/wfts_5w.pkl')
     # for item in word_item_list:
     #     print('{a}\t{b}'.format(a=item.word,b=item.total_freq))
     # plt.plot([math.log(x.total_freq) for x in word_item_list])
@@ -286,6 +283,17 @@ if __name__=='__main__':
     for item in top_asDay:
         print('------------------------------')
         print(time.strftime("%Y-%m-%d",time.localtime(item['time'])))
-        print(item['obj'].topN(10))
+        print(item['obj'].topN(20))
 
-
+    # wfts = FI.load_pickle('./static/wfts_1w.pkl')
+    # word_item_list = wfts.word_statistic.values()
+    # word_item_list = sorted(word_item_list, key=lambda x:x.total_freq,reverse=True)
+    # # for item in word_item_list:
+    # #     print('{a}\t{b}'.format(a=item.word,b=item.total_freq))
+    # item = wfts.word_statistic['英国']
+    # item = item.freq_day
+    # time = [x['time'] for x in item]
+    # freq = [x['freq'] for x in item]
+    # plt.plot(time,freq)
+    # plt.show()
+    # print(time)
