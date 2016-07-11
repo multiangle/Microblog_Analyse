@@ -24,18 +24,18 @@ class WordFreqItemStatistic():
         self.min_year = -1
         self.max_year = -1
 
-    def Add_Freq_By_Timestamp(self,timestamp):
+    def Add_Freq_By_Timestamp(self,timestamp,N=1):
         t = time.localtime(timestamp)
         year = t.tm_year
         month = (year-2000)*12 + t.tm_mon
         day = int(timestamp/86400)
         hour = t.tm_hour
 
-        self.__Binary_Find_andAdd(self.freq_day,day)
-        self.__Binary_Find_andAdd(self.freq_month,month)
-        self.__Binary_Find_andAdd(self.freq_year,year)
-        self.circle_hour[hour] += 1
-        self.total_freq += 1
+        self.__Binary_Find_andAdd(self.freq_day,day,N)
+        self.__Binary_Find_andAdd(self.freq_month,month,N)
+        self.__Binary_Find_andAdd(self.freq_year,year,N)
+        self.circle_hour[hour] += N
+        self.total_freq += N
 
         if day<self.min_day:
             self.min_day = day
@@ -54,14 +54,14 @@ class WordFreqItemStatistic():
         t = time.localtime(value*86400)
         return time.strftime('%Y-%m-%d',t)
 
-    def __Binary_Find_andAdd(self,list,value):
+    def __Binary_Find_andAdd(self,list,value,N):
         i = self.__Binary_Find(list,value)
         if i==list.__len__() :
-            list.append({'time':value,'freq':1})
+            list.append({'time':value,'freq':N})
         elif list[i]['time']==value :
-            list[i]['freq'] += 1
+            list[i]['freq'] += N
         else:
-            list.insert(i,{'time':value,'freq':1})
+            list.insert(i,{'time':value,'freq':N})
 
     def __Binary_Find(self,list,value):
         low = 0
@@ -96,6 +96,26 @@ class WordFreqTotalStatistic():
         obj_y.Add_Word(word)
         obj_m.Add_Word(word)
         obj_d.Add_Word(word)
+
+    def Add_Sentence_With_Timestamp(self,sentence,timestamp): # sentence是一个单词列表
+        unique_word = []
+        unique_word_freq = []
+        for word in sentence:
+            if word not in unique_word:
+                unique_word.append(word)
+                unique_word_freq.append(1)
+            else:
+                unique_word_freq[unique_word.index(word)]+=1
+        [obj_y,obj_m,obj_d] = self.__get_Correspond_Top_Obj(timestamp)
+        for i in range(unique_word.__len__()):
+            word = unique_word[i]
+            if word not in self.word_list:
+                self.word_list.append(word)
+                self.word_statistic[word] = WordFreqItemStatistic(word)
+            self.word_statistic[word].Add_Freq_By_Timestamp(timestamp,N=unique_word_freq[i])
+            obj_y.Add_Word(word)
+            obj_m.Add_Word(word)
+            obj_d.Add_Word(word)
 
     def __Binary_Find(self,list,value):
         low = 0
@@ -180,7 +200,7 @@ class TopWordStatic():
         self.reflection = [] # 反射表 [dict_index, index of the word in sorted list]
         self.word_id_list = [] # 记录反射表中各行的位置 [dict_index,....,]
 
-    def Add_Word(self,word):
+    def Add_Word(self,word,N=1):
         try:
             dict_index = self.dict.index(word)
         except Exception as e:
@@ -190,7 +210,7 @@ class TopWordStatic():
             reflect_id = self.word_id_list.__len__()
             self.word_id_list.append(dict_index)
             self.reflection.append([dict_index,self.sorted_list.__len__()])
-            self.sorted_list.append([dict_index,1])
+            self.sorted_list.append([dict_index,N])
         else:
             reflect_id = self.word_id_list.index(dict_index)
             reflection_pair = self.reflection[reflect_id]
@@ -199,7 +219,7 @@ class TopWordStatic():
             sorted_pair = self.sorted_list[reflection_pair[1]]
             if sorted_pair[0]!=dict_index:
                 raise RuntimeError("the id of word dismatch")
-            sorted_pair[1] += 1
+            sorted_pair[1] += N
 
             # 找到欲替换的pair
             target = reflection_pair[1]-1
@@ -225,7 +245,6 @@ class TopWordStatic():
         cut = [[self.dict[x[0]],x[1]] for x in cut]
         return cut
 
-
 def Binary_Find(list,value):
     low = 0
     high = list.__len__()
@@ -250,31 +269,36 @@ def Binary_Find(list,value):
 
 if __name__=='__main__':
     stop_words = FI.load_pickle('./static/stop_words.pkl')
-    wfts = WordFreqTotalStatistic()
+    wfts = FI.load_pickle('./static/wfts_continue.pkl')
     client = MongoClient('localhost',27017)
     db = client['microblog_spider']
     latest_history = db.latest_history
     count = 0
     data = []
     batch_size = 100
-    gone_size = 0
+    gone_size = 40000
 
-    while count<500 :
-        data = latest_history.find().skip(count*batch_size).limit(batch_size)
+    while count<100 :
+        t1 = time.time()
+        data = latest_history.find().skip(gone_size+count*batch_size).limit(batch_size)
         data = [x for x in data]
+        t2 = time.time()
         count += 1
         text = [x['dealed_text']['left_content'][0] for x in data]
         date = [x['created_timestamp'] for x in data]
         cutted_text = []
         for i in range(text.__len__()):
-            s = jieba.cut(text[i])
-            for word in s:
-                if word not in stop_words:
-                    wfts.Add_Word_With_Timestamp(word,date[i])
-        print('{x} is completed'.format(x = count))
-    FI.save_pickle(wfts,'./static/wfts_5w.pkl')
+            s = list(jieba.cut(text[i]))
+            for i in range(s.__len__())[::-1]:
+                word = s[i]
+                if word in stop_words:
+                    s.pop(i)
+            wfts.Add_Sentence_With_Timestamp(s,date[i])
+        t3 = time.time()
+        print('{x} is completed\t{t1}\t{t2}'.format(x = count,t1=t2-t1,t2=t3-t2))
+    FI.save_pickle(wfts,'./static/wfts_continue.pkl')
 
-    wfts = FI.load_pickle('./static/wfts_5w.pkl')
+    wfts = FI.load_pickle('./static/wfts_continue.pkl')
     # for item in word_item_list:
     #     print('{a}\t{b}'.format(a=item.word,b=item.total_freq))
     # plt.plot([math.log(x.total_freq) for x in word_item_list])
