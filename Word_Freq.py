@@ -1,5 +1,10 @@
 __author__ = 'multiangle'
+import jieba
 import time
+import math
+from pymongo import MongoClient
+import File_Interface as FI
+import matplotlib.pyplot as plt
 #对词的统计
 class WordFreqItemStatistic():
     def __init__(self,word):
@@ -44,6 +49,10 @@ class WordFreqItemStatistic():
             self.min_year = year
         if year>self.max_year:
             self.max_year = year
+
+    def Trans_Day_Time(self,value):
+        t = time.localtime(value*86400)
+        return time.strftime('%Y-%m-%d',t)
 
     def __Binary_Find_andAdd(self,list,value):
         i = self.__Binary_Find(list,value)
@@ -108,7 +117,7 @@ class WordFreqTotalStatistic():
         day = t.tm_mday
         ts_year = int(time.mktime(time.strptime("{y}".format(y=year),"%Y")))
         ts_month = int(time.mktime(time.strptime("{y}-{m}".format(y=year,m=month),"%Y-%m")))
-        ts_day = int(time.mktime(time.strptime("{y]-{m}-{d}".format(y=year,m=month,d=day),"%Y-%m-%d")))
+        ts_day = int(time.mktime(time.strptime("{y}-{m}-{d}".format(y=year,m=month,d=day),"%Y-%m-%d")))
 
         ret = [None,None,None] # year,month ,day obj
 
@@ -161,7 +170,7 @@ class TopWordStatic():
             self.time_fmt = "%Y-%m"
             self.time_type = 2
         else:
-            self.time_str = "{y]-{m}-{d}".format(y=year,m=month,d=day)
+            self.time_str = "{y}-{m}-{d}".format(y=year,m=month,d=day)
             self.time_fmt = "%Y-%m-%d"
             self.time_type = 3
         self.timestamp = int(time.mktime(time.strptime(self.time_str,self.time_fmt)))
@@ -173,7 +182,7 @@ class TopWordStatic():
 
     def Add_Word(self,word):
         try:
-            dict_index = self.dict.indexOf(word)
+            dict_index = self.dict.index(word)
         except Exception as e:
             raise RuntimeError("the word not exists in dict")
 
@@ -211,6 +220,12 @@ class TopWordStatic():
             self.sorted_list[ori_pos] = self.sorted_list[target_pos]
             self.sorted_list[target_pos] = temp_pair
 
+    def topN(self,n):
+        cut = self.sorted_list[0:n]
+        cut = [[self.dict[x[0]],x[1]] for x in cut]
+        return cut
+
+
 def Binary_Find(list,value):
     low = 0
     high = list.__len__()
@@ -234,7 +249,43 @@ def Binary_Find(list,value):
         list.insert(i,{'time':value,'freq':1})
 
 if __name__=='__main__':
-    wfts = WordFreqTotalStatistic()
+    # stop_words = FI.load_pickle('./static/stop_words.pkl')
+    # wfts = WordFreqTotalStatistic()
+    # client = MongoClient('localhost',27017)
+    # db = client['microblog_spider']
+    # latest_history = db.latest_history
+    # count = 0
+    # data = []
+    # batch_size = 100
+    # gone_size = 0
+    # while count<10 :
+    #     d = latest_history.find().skip(count*batch_size).limit(batch_size)
+    #     d = [x for x in d]
+    #     data += d
+    #     count += 1
+    # text = [x['dealed_text']['left_content'][0] for x in data]
+    # date = [x['created_timestamp'] for x in data]
+    # cutted_text = []
+    # for i in range(text.__len__()):
+    #     s = jieba.cut(text[i])
+    #     for word in s:
+    #         if word not in stop_words:
+    #             wfts.Add_Word_With_Timestamp(word,date[i])
+    #     print('{x} is completed'.format(x = i))
+    #
+    # FI.save_pickle(wfts,'./static/wfts_1000.pkl')
 
+    wfts = FI.load_pickle('./static/wfts_1000.pkl')
+    word_item_list = wfts.word_statistic.values()
+    word_item_list = sorted(word_item_list, key=lambda x:x.total_freq,reverse=True)
+    # for item in word_item_list:
+    #     print('{a}\t{b}'.format(a=item.word,b=item.total_freq))
+    # plt.plot([math.log(x.total_freq) for x in word_item_list])
+    # plt.show()
+    top_asDay = wfts.top_asDay
+    for item in top_asDay:
+        print('------------------------------')
+        print(time.strftime("%Y-%m-%d",time.localtime(item['time'])))
+        print(item['obj'].topN(10))
 
 
