@@ -56,8 +56,20 @@ count = 0
 for line in data:
     count += 1
     line['time'] = base_timestamp + count
+wfts = WordFreqTotalStatistic()
+count = 0
 for line in data:
-    print(line)
+    count += 1
+    print(count)
+    timestamp = line['time']
+    t = line['text']
+    for x in t:
+        s = list(jieba.cut(x))
+        wfts.Add_Sentence_With_Timestamp(s,timestamp)
+    # print(t)
+FI.save_pickle(wfts,'.\static\HongLouMeng_wfts')
+# wfts = FI.load_pickle('.\static\HongLouMeng_wfts')
+
 
 # stop_words = FI.load_pickle('.\static\stop_words.pkl')
 # wdict = FI.load_pickle('.\static\斗破dict_huffman.pkl')
