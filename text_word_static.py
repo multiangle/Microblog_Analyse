@@ -4,6 +4,9 @@ from pyword2vec import Word2Vec
 from Word_Freq import WordFreqTotalStatistic
 import jieba
 import re
+import matplotlib.pyplot as plt
+from pymongo import MongoClient
+import json
 
 path = r'.\static\stop_words.txt'
 
@@ -53,22 +56,49 @@ def read_HongLouMeng():
 data = read_HongLouMeng()
 base_timestamp = 1468937028
 count = 0
+client = MongoClient('localhost',27017)
+db_fiction = client['fiction']
+
+c_honglou = db_fiction.HongLouMeng
+print(db_fiction.collection_names())
 for line in data:
     count += 1
-    line['time'] = base_timestamp + count
-wfts = WordFreqTotalStatistic()
-count = 0
-for line in data:
-    count += 1
-    print(count)
-    timestamp = line['time']
-    t = line['text']
-    for x in t:
-        s = list(jieba.cut(x))
-        wfts.Add_Sentence_With_Timestamp(s,timestamp)
-    # print(t)
-FI.save_pickle(wfts,'.\static\HongLouMeng_wfts')
+    line['time'] = base_timestamp + count * 86400
+    # print(line)
+    # c_honglou.insert(line)
+
+res = list(c_honglou.find())
+print(res.__len__())
+
+
+# wfts = WordFreqTotalStatistic()
+# count = 0
+# for line in data:
+#     count += 1
+#     print(count)
+#     timestamp = line['time']
+#     t = line['text']
+#     for x in t:
+#         s = list(jieba.cut(x))
+#         wfts.Add_Sentence_With_Timestamp(s,timestamp)
+#     # print(t)
+# FI.save_pickle(wfts,'.\static\HongLouMeng_wfts')
+
+# # 绘制各个关键词各回的出现频率
 # wfts = FI.load_pickle('.\static\HongLouMeng_wfts')
+# wso = wfts.word_statistic
+# ws = wso.values()
+# ws = sorted(ws,key=lambda x:x.total_freq,reverse=True)
+# # for word in ws:
+# #     print('{a}\t{b}'.format(a = word.word,b=word.total_freq))
+# freq_day_dict_list = wso['大观园'].freq_day
+# frq_list = [x for x in freq_day_dict_list]
+# frq = [x['freq'] for x in frq_list]
+# tm = [x['time'] for x in frq_list]
+# tm = [x-min(tm)+1 for x in tm]
+# print(frq_list)
+# plt.plot(tm,frq)
+# plt.show()
 
 
 # stop_words = FI.load_pickle('.\static\stop_words.pkl')
